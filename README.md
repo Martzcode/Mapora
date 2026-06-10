@@ -69,7 +69,7 @@ Mapora est une application cartographique desktop offline permettant d’explore
 
 * Tauri (Rust + WebView)
 * TypeScript
-* Angular ou React
+* Angular
 * MapLibre GL JS
 
 ### Traitement des données
