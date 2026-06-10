@@ -143,7 +143,7 @@ L’application est construite avec Tauri afin d’offrir :
 
 ## Licence
 
-À définir
+GNU AFFERO GENERAL PUBLIC LICENSE V3
 
 ---
 
