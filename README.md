@@ -91,7 +91,7 @@ atlasvault/
 ├── frontend/              # Application Tauri
 │   ├── src/
 │   ├── public/
-│   └── tauri/
+│   └── src-tauri/
 │
 ├── data-pipeline/         # Scripts de traitement des données
 │   ├── scripts/
