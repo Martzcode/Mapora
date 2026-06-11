@@ -19,6 +19,33 @@ Pour exécuter et développer sur Mapora, vous devez avoir installé :
 
 ---
 
+## 🚀 Lancement Rapide (Automatique)
+
+Pour simplifier le développement, un script d'automatisation `start.sh` est disponible à la racine du projet pour installer les dépendances et lancer les services en parallèle :
+
+* **Tout lancer en mode développement (Recommandé) :**
+  ```bash
+  ./start.sh
+  ```
+* **Lancer uniquement le backend :**
+  ```bash
+  ./start.sh backend
+  ```
+* **Lancer uniquement le frontend :**
+  ```bash
+  ./start.sh frontend
+  ```
+* **Installer les dépendances frontend & vérifier les prérequis :**
+  ```bash
+  ./start.sh install
+  ```
+* **Compiler le backend et le frontend pour la production :**
+  ```bash
+  ./start.sh build
+  ```
+
+---
+
 ## ⚙️ 1. Backend (Quarkus)
 
 Le backend gère l'API REST, les traitements géographiques et distribue les packs de cartes offline.
@@ -65,7 +92,7 @@ npm run tauri dev
 ```
 Cette commande va :
 1. Lancer le serveur de développement Angular sur `http://localhost:1420`.
-2. Compiler le code Rust natif situé dans `tauri/`.
+2. Compiler le code Rust natif situé dans `src-tauri/`.
 3. Ouvrir la fenêtre native de l'application contenant l'interface Angular.
 
 ### Compiler pour la production (Générer l'exécutable)
@@ -75,7 +102,7 @@ Pour générer l'installateur desktop natif (ex. `.deb`, `.appimage` sous Linux,
 cd frontend
 npm run tauri build
 ```
-Les exécutables générés se situeront dans le dossier `frontend/tauri/target/release/bundle/`.
+Les exécutables générés se situeront dans le dossier `frontend/src-tauri/target/release/bundle/`.
 
 ---
 
