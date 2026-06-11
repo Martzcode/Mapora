@@ -68,7 +68,7 @@ check_prerequisites() {
     
     # Check Java
     if ! command -v java &> /dev/null; then
-        log_error "Java is not installed. Mapora backend requires Java 21+."
+        log_error "Java is not installed. Mapora backend requires Java 21 (LTS)."
         exit 1
     fi
     JAVA_VER=$(java -version 2>&1 | head -n 1 | cut -d'"' -f2 || echo "unknown")

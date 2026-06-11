@@ -7,7 +7,7 @@ Ce document décrit comment configurer votre environnement, lancer l'application
 ## 📋 Prérequis
 
 Pour exécuter et développer sur Mapora, vous devez avoir installé :
-- **Java 21+** (recommandé : Java 21 ou 25)
+- **Java 21** (version LTS requise)
 - **Apache Maven 3.9+** (ou utiliser le wrapper `./mvnw` fourni)
 - **Node.js 22+** et **NPM 10+**
 - **Rust et Cargo** (requis pour compiler l'application native Tauri)

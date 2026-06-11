@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "frontend",
+  "productName": "Mapora",
   "version": "0.1.0",
-  "identifier": "com.martz.frontend",
+  "identifier": "org.mapora.app",
   "build": {
     "beforeDevCommand": "npm run start",
     "devUrl": "http://localhost:1420",
@@ -12,9 +12,15 @@
   "app": {
     "windows": [
       {
-        "title": "frontend",
-        "width": 800,
-        "height": 600
+        "label": "main",
+        "title": "Mapora — Offline Explorer",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
+        "maximized": false,
+        "resizable": true,
+        "center": true
       }
     ],
     "security": {
