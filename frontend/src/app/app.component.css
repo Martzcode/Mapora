@@ -581,6 +581,78 @@
   border-color: var(--text-muted);
 }
 
+/* Save / Delete zone row */
+.save-delete-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.action-btn.save-btn {
+  flex: 1;
+  background-color: #f0fdf4;
+  border: 1px solid #86efac;
+  color: #15803d;
+}
+
+.action-btn.save-btn:hover {
+  background-color: #dcfce7;
+  border-color: #4ade80;
+}
+
+.action-btn.delete-btn {
+  background-color: #fff1f2;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+  padding: 0 12px;
+}
+
+.action-btn.delete-btn:hover {
+  background-color: #fee2e2;
+  border-color: #f87171;
+}
+
+.saved-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: #15803d;
+  background-color: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  height: 38px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .action-btn.save-btn {
+    background-color: rgba(21, 128, 61, 0.15);
+    border-color: rgba(134, 239, 172, 0.3);
+    color: #4ade80;
+  }
+  .action-btn.save-btn:hover {
+    background-color: rgba(21, 128, 61, 0.25);
+  }
+  .action-btn.delete-btn {
+    background-color: rgba(185, 28, 28, 0.15);
+    border-color: rgba(252, 165, 165, 0.3);
+    color: #f87171;
+  }
+  .action-btn.delete-btn:hover {
+    background-color: rgba(185, 28, 28, 0.25);
+  }
+  .saved-badge {
+    background-color: rgba(21, 128, 61, 0.15);
+    border-color: rgba(134, 239, 172, 0.3);
+    color: #4ade80;
+  }
+}
+
+
 /* Information Subsections */
 .info-section {
   border-top: 1px solid var(--border-color);

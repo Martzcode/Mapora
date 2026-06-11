@@ -287,10 +287,19 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
   ];
 
+  // IDs des zones intégrées par défaut — ne peuvent pas être supprimées
+  private readonly BUILTIN_IDS = new Set([
+    'paris', 'rome', 'tokyo', 'newyork',
+    'grandcanyon', 'fuji', 'saintmichel', 'cairo'
+  ]);
+
+  private readonly STORAGE_KEY = 'mapora_saved_zones';
+
   constructor(@Inject(PLATFORM_ID) private platformId: Object, private ngZone: NgZone) {}
 
   ngOnInit(): void {
-    this.filteredPlaces = this.places;
+    this.loadSavedZones();
+    this.filteredPlaces = [...this.places];
     this.checkBackendConnection();
   }
 
@@ -715,5 +724,84 @@ export class AppComponent implements OnInit, AfterViewInit {
     this.activeMarkerId = null;
     this.customMarkerGroup.clearLayers();
     this.renderPlaceMarkers();
+  }
+
+  // ── LocalStorage persistence ──────────────────────────────────────────────
+
+  /** Vérifie si une zone fait partie du catalogue intégré (non supprimable). */
+  isBuiltinPlace(place: Place): boolean {
+    return this.BUILTIN_IDS.has(place.id);
+  }
+
+  /** Vérifie si une zone personnalisée est déjà enregistrée dans le localStorage. */
+  isZoneSaved(id: string): boolean {
+    if (this.BUILTIN_IDS.has(id)) return true; // built-in = toujours "sauvegardé"
+    try {
+      const raw = localStorage.getItem(this.STORAGE_KEY);
+      const saved: Place[] = raw ? JSON.parse(raw) : [];
+      return saved.some(p => p.id === id);
+    } catch {
+      return false;
+    }
+  }
+
+  /** Charge les zones sauvegardées depuis le localStorage et les fusionne dans la liste. */
+  loadSavedZones(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    try {
+      const raw = localStorage.getItem(this.STORAGE_KEY);
+      if (!raw) return;
+      const saved: Place[] = JSON.parse(raw);
+      saved.forEach(zone => {
+        // Évite les doublons avec les zones intégrées
+        if (!this.places.find(p => p.id === zone.id)) {
+          this.places.push(zone);
+        }
+      });
+    } catch (e) {
+      console.warn('[Mapora] Impossible de charger les zones sauvegardées :', e);
+    }
+  }
+
+  /** Enregistre la zone actuellement sélectionnée dans le localStorage. */
+  saveCurrentZone(): void {
+    if (!this.selectedPlace || this.isBuiltinPlace(this.selectedPlace)) return;
+    try {
+      const raw = localStorage.getItem(this.STORAGE_KEY);
+      const saved: Place[] = raw ? JSON.parse(raw) : [];
+      const alreadySaved = saved.find(p => p.id === this.selectedPlace!.id);
+      if (!alreadySaved) {
+        saved.push(this.selectedPlace);
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(saved));
+        // Ajoute également à la liste en mémoire si absent
+        if (!this.places.find(p => p.id === this.selectedPlace!.id)) {
+          this.places.push(this.selectedPlace);
+        }
+        this.filterPlaces(this.searchQuery);
+      }
+    } catch (e) {
+      console.warn('[Mapora] Impossible de sauvegarder la zone :', e);
+    }
+  }
+
+  /** Supprime une zone personnalisée du localStorage et de la liste en mémoire. */
+  deleteZone(place: Place): void {
+    if (this.isBuiltinPlace(place)) return; // protection
+    try {
+      const raw = localStorage.getItem(this.STORAGE_KEY);
+      const saved: Place[] = raw ? JSON.parse(raw) : [];
+      const updated = saved.filter(p => p.id !== place.id);
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(updated));
+      // Retire de la liste en mémoire
+      this.places = this.places.filter(p => p.id !== place.id);
+    } catch (e) {
+      console.warn('[Mapora] Impossible de supprimer la zone :', e);
+    }
+    // Ferme le panneau et rafraîchit
+    this.selectedPlace = null;
+    this.activeMarkerId = null;
+    this.customMarkerGroup.clearLayers();
+    this.renderPlaceMarkers();
+    this.filterPlaces(this.searchQuery);
   }
 }
