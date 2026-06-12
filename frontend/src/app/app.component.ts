@@ -28,6 +28,7 @@ interface SearchSuggestion {
   lng: number;
   country: string;
   countryCode: string;
+  extratags?: any;
 }
 
 @Component({
@@ -261,7 +262,7 @@ export class AppComponent implements OnInit, AfterViewInit {
 
     // Fetch live search suggestions if connected online (smart autocomplete)
     if (lowerQuery.length > 2) {
-      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(lowerQuery)}&limit=5&addressdetails=1`, {
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(lowerQuery)}&limit=5&addressdetails=1&extratags=1`, {
         headers: {
           'Accept-Language': 'fr'
         }
@@ -280,7 +281,8 @@ export class AppComponent implements OnInit, AfterViewInit {
               lat: parseFloat(item.lat),
               lng: parseFloat(item.lon),
               country: country,
-              countryCode: cc
+              countryCode: cc,
+              extratags: item.extratags
             };
           });
         } else {
@@ -356,6 +358,9 @@ export class AppComponent implements OnInit, AfterViewInit {
 
     // Refresh catalog markers (de-select catalog highlight)
     this.renderPlaceMarkers();
+
+    // Fetch details dynamically from Wikipedia, Wikidata, and Overpass APIs
+    this.fetchAdditionalDetails(newPlace, sug.extratags);
   }
 
   // Reverse geocoding on click
@@ -393,7 +398,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     this.customMarkerGroup.addLayer(marker);
 
     // Fetch information
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=12&addressdetails=1`, {
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=12&addressdetails=1&extratags=1`, {
       headers: {
         'Accept-Language': 'fr'
       }
@@ -407,7 +412,7 @@ export class AppComponent implements OnInit, AfterViewInit {
         const flag = this.getFlagEmoji(countryCode);
         const displayName = data.display_name.split(',')[0] || city;
 
-        this.selectedPlace = {
+        const newPlace: Place = {
           id: 'custom_click',
           name: displayName,
           country: country,
@@ -429,6 +434,8 @@ export class AppComponent implements OnInit, AfterViewInit {
           ]
         };
 
+        this.selectedPlace = newPlace;
+
         // Update active marker label
         this.customMarkerGroup.clearLayers();
         const finalIcon = L.divIcon({
@@ -439,6 +446,9 @@ export class AppComponent implements OnInit, AfterViewInit {
         });
         const finalMarker = L.marker([lat, lng], { icon: finalIcon });
         this.customMarkerGroup.addLayer(finalMarker);
+
+        // Fetch details dynamically from Wikipedia, Wikidata, and Overpass APIs
+        this.fetchAdditionalDetails(newPlace, data.extratags);
       }
     })
     .catch(() => {
@@ -465,6 +475,150 @@ export class AppComponent implements OnInit, AfterViewInit {
     // Reset catalog highlights
     this.activeMarkerId = null;
     this.renderPlaceMarkers();
+  }
+
+  // Fetch additional details from open source APIs (Wikipedia, Wikidata, Overpass)
+  fetchAdditionalDetails(place: Place, extratags: any): void {
+    const lat = place.lat;
+    const lng = place.lng;
+    
+    // 1. Identify Wikipedia Page & Wikidata ID
+    let wikipediaLang = 'fr';
+    let wikipediaTitle = place.name;
+    const wikidataId = extratags?.wikidata || null;
+
+    if (extratags?.wikipedia) {
+      const parts = extratags.wikipedia.split(':');
+      if (parts.length === 2) {
+        wikipediaLang = parts[0];
+        wikipediaTitle = parts[1];
+      }
+    }
+
+    // 2. Fetch Wikipedia Summary
+    const wikiUrl = `https://${wikipediaLang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikipediaTitle)}`;
+    
+    fetch(wikiUrl)
+      .then(res => {
+        if (!res.ok) throw new Error();
+        return res.json();
+      })
+      .then(data => {
+        this.ngZone.run(() => {
+          if (data.extract) {
+            place.description = data.extract;
+            if (this.selectedPlace && this.selectedPlace.id === place.id) {
+              this.selectedPlace = { ...place };
+            }
+            // Update in places array if already saved
+            const idx = this.places.findIndex(p => p.id === place.id);
+            if (idx !== -1) {
+              this.places[idx] = { ...place };
+              this.updateSavedZoneInStorage(place);
+            }
+          }
+        });
+      })
+      .catch(() => {});
+
+    // 3. Fetch Wikidata Info (population, area, elevation)
+    if (wikidataId) {
+      const wikidataUrl = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${wikidataId}&props=claims&format=json&origin=*`;
+      fetch(wikidataUrl)
+        .then(res => res.json())
+        .then(data => {
+          const entity = data.entities?.[wikidataId];
+          if (entity && entity.claims) {
+            const popVal = this.getWikidataClaimValue(entity.claims, 'P1082');
+            const areaVal = this.getWikidataClaimValue(entity.claims, 'P2046');
+            const elevVal = this.getWikidataClaimValue(entity.claims, 'P2044');
+
+            this.ngZone.run(() => {
+              if (popVal) place.population = `${popVal} hab.`;
+              if (areaVal) place.area = `${areaVal} km²`;
+              if (elevVal) place.elevation = `${elevVal} m`;
+
+              if (this.selectedPlace && this.selectedPlace.id === place.id) {
+                this.selectedPlace = { ...place };
+              }
+              // Update in places array if already saved
+              const idx = this.places.findIndex(p => p.id === place.id);
+              if (idx !== -1) {
+                this.places[idx] = { ...place };
+                this.updateSavedZoneInStorage(place);
+              }
+            });
+          }
+        })
+        .catch(() => {});
+    }
+    
+    // 4. Fetch local POIs via Overpass API
+    const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json][timeout:10];(node(around:3000,${lat},${lng})["tourism"~"museum|monument|attraction|viewpoint"];node(around:3000,${lat},${lng})["historic"];);out 5;`;
+    fetch(overpassUrl)
+      .then(res => res.json())
+      .then(data => {
+        if (data.elements && data.elements.length > 0) {
+          const newPois = data.elements.map((el: any) => {
+            let typeLabel = "Attraction";
+            if (el.tags.tourism) typeLabel = el.tags.tourism;
+            else if (el.tags.historic) typeLabel = el.tags.historic;
+            
+            typeLabel = typeLabel.charAt(0).toUpperCase() + typeLabel.slice(1);
+
+            return {
+              name: el.tags.name || "Lieu d'intérêt",
+              type: typeLabel,
+              desc: el.tags.description || el.tags.note || `Point d'intérêt situé à proximité.`
+            };
+          });
+
+          this.ngZone.run(() => {
+            place.pois = newPois;
+            if (this.selectedPlace && this.selectedPlace.id === place.id) {
+              this.selectedPlace = { ...place };
+            }
+            // Update in places array if already saved
+            const idx = this.places.findIndex(p => p.id === place.id);
+            if (idx !== -1) {
+              this.places[idx] = { ...place };
+              this.updateSavedZoneInStorage(place);
+            }
+          });
+        }
+      })
+      .catch(() => {});
+  }
+
+  // Retrieve numeric/text values from Wikidata Entity claims object
+  getWikidataClaimValue(claims: any, prop: string): string | null {
+    const claim = claims[prop];
+    if (!claim || claim.length === 0) return null;
+    const mainsnak = claim[0].mainsnak;
+    if (!mainsnak || !mainsnak.datavalue) return null;
+    const value = mainsnak.datavalue.value;
+    if (typeof value === 'object') {
+      if (value.amount) {
+        return parseFloat(value.amount).toLocaleString('fr-FR');
+      }
+      return value.numeric || null;
+    }
+    return value.toString();
+  }
+
+  // Update a saved zone in LocalStorage if details are fetched after initial save
+  updateSavedZoneInStorage(place: Place): void {
+    try {
+      const raw = localStorage.getItem(this.STORAGE_KEY);
+      const saved: Place[] = raw ? JSON.parse(raw) : [];
+      const idx = saved.findIndex(p => p.id === place.id);
+      if (idx !== -1) {
+        saved[idx] = place;
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(saved));
+      }
+    } catch (e) {
+      console.warn('[Mapora] Impossible de mettre à jour la zone dans le localStorage :', e);
+    }
   }
 
   // Update a custom marker helper
